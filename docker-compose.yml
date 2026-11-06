@@ -1,0 +1,12 @@
+services:
+  aura:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      AURA_ADMIN_TOKEN: ${AURA_ADMIN_TOKEN:-local-dev-change-this-token}
+      AURA_DB_PATH: /srv/aura/data/aura.db
+    volumes:
+      - aura-data:/srv/aura/data
+volumes:
+  aura-data:
