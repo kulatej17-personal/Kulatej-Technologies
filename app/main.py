@@ -234,7 +234,8 @@ def create_app(db_path=None, admin_token=None):
     @app.post("/api/work-items/{item_id}/run", dependencies=[Depends(admin)])
     async def run_work_item(item_id: str):
         import asyncio
-        from app.department_agents import get_department, run_department_agent
+
+        from app.department_agents import run_department_agent
         row = db.one("SELECT * FROM work_items WHERE id=?", (item_id,))
         if not row:
             raise HTTPException(404, "Work item not found")
