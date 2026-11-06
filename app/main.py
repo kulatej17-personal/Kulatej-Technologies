@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
+import httpx
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -18,6 +19,8 @@ from app.schemas import (
     AgentCreate,
     AgentCreated,
     AgentPublic,
+    CoordinatorTaskCreate,
+    DepartmentTaskCreate,
 )
 from app.security import extract_bearer, hash_token, new_agent_token, require_admin
 
@@ -130,6 +133,62 @@ def create_app(db_path=None, admin_token=None):
                     "Agent-reported values match." if match else "Agent-reported values differ.",
                     now(), action_id))
         return public_action(db.one("SELECT * FROM actions WHERE id=?", (action_id,)))
+
+
+    @app.get("/api/departments", dependencies=[Depends(admin)])
+    def departments():
+        from app.department_agents import load_department_registry
+
+        registry = load_department_registry()
+        return {
+            "coordinator": registry["coordinator"],
+            "departments": registry["departments"],
+            "runtime_status": "model_configuration_required",
+        }
+
+    @app.post("/api/department-tasks", dependencies=[Depends(admin)])
+    async def department_task(body: DepartmentTaskCreate):
+        from app.department_agents import run_department_agent
+
+        try:
+            return await run_department_agent(body.department, body.task, body.context)
+        except ValueError as exc:
+            raise HTTPException(404, str(exc)) from exc
+        except RuntimeError as exc:
+            raise HTTPException(503, str(exc)) from exc
+        except httpx.HTTPError as exc:
+            raise HTTPException(502, "The configured AI provider could not complete the request.") from exc
+
+    @app.post("/api/coordinator/tasks", dependencies=[Depends(admin)])
+    async def coordinator_task(body: CoordinatorTaskCreate):
+        import asyncio
+
+        from app.department_agents import get_department, run_department_agent
+
+        if len(set(body.departments)) != len(body.departments):
+            raise HTTPException(422, "Department IDs must be unique.")
+        unknown = [item for item in body.departments if get_department(item) is None]
+        if unknown:
+            raise HTTPException(422, f"Unknown department IDs: {', '.join(unknown)}")
+        results = await asyncio.gather(
+            *(run_department_agent(item, body.task, body.context) for item in body.departments),
+            return_exceptions=True,
+        )
+        completed = []
+        failed = []
+        for department_id, result in zip(body.departments, results):
+            if isinstance(result, Exception):
+                failed.append({"department": department_id, "error": str(result)})
+            else:
+                completed.append(result)
+        return {
+            "task": body.task,
+            "status": "completed" if not failed else ("partial" if completed else "failed"),
+            "department_results": completed,
+            "failures": failed,
+            "external_actions_executed": False,
+            "human_review_required": True,
+        }
 
     return app
 
