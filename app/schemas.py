@@ -54,3 +54,15 @@ class ActionPublic(BaseModel):
     outcome: dict[str, Any] | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class DepartmentTaskCreate(BaseModel):
+    department: str = Field(min_length=2, max_length=40)
+    task: str = Field(min_length=3, max_length=10000)
+    context: dict[str, Any] = Field(default_factory=dict)
+
+
+class CoordinatorTaskCreate(BaseModel):
+    departments: list[str] = Field(min_length=1, max_length=6)
+    task: str = Field(min_length=3, max_length=10000)
+    context: dict[str, Any] = Field(default_factory=dict)
