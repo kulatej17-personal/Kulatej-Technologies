@@ -21,6 +21,8 @@ from app.schemas import (
     AgentPublic,
     CoordinatorTaskCreate,
     DepartmentTaskCreate,
+    WorkItemCreate,
+    WorkItemUpdate,
 )
 from app.security import extract_bearer, hash_token, new_agent_token, require_admin
 
