@@ -66,3 +66,14 @@ class CoordinatorTaskCreate(BaseModel):
     departments: list[str] = Field(min_length=1, max_length=6)
     task: str = Field(min_length=3, max_length=10000)
     context: dict[str, Any] = Field(default_factory=dict)
+
+
+class WorkItemCreate(BaseModel):
+    title: str = Field(min_length=3, max_length=160)
+    description: str = Field(min_length=3, max_length=10000)
+    departments: list[str] = Field(min_length=1, max_length=6)
+    priority: str = Field(default="normal", pattern="^(low|normal|high|urgent)$")
+
+
+class WorkItemUpdate(BaseModel):
+    status: str = Field(pattern="^(backlog|in_progress|blocked|done)$")

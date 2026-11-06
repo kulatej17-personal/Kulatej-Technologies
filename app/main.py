@@ -21,6 +21,8 @@ from app.schemas import (
     AgentPublic,
     CoordinatorTaskCreate,
     DepartmentTaskCreate,
+    WorkItemCreate,
+    WorkItemUpdate,
 )
 from app.security import extract_bearer, hash_token, new_agent_token, require_admin
 
@@ -189,6 +191,78 @@ def create_app(db_path=None, admin_token=None):
             "external_actions_executed": False,
             "human_review_required": True,
         }
+
+    @app.get("/api/work-items", dependencies=[Depends(admin)])
+    def list_work_items():
+        rows = db.all("SELECT * FROM work_items ORDER BY updated_at DESC")
+        for row in rows:
+            row["departments"] = json.loads(row["departments"])
+            row["result"] = json.loads(row["result"]) if row["result"] else None
+        return rows
+
+    @app.post("/api/work-items", status_code=201, dependencies=[Depends(admin)])
+    def create_work_item(body: WorkItemCreate):
+        from app.department_agents import get_department
+        if len(set(body.departments)) != len(body.departments):
+            raise HTTPException(422, "Department IDs must be unique.")
+        unknown = [item for item in body.departments if get_department(item) is None]
+        if unknown:
+            raise HTTPException(422, f"Unknown department IDs: {', '.join(unknown)}")
+        item_id, timestamp = str(uuid.uuid4()), now()
+        db.execute(
+            "INSERT INTO work_items VALUES(?,?,?,?,?,?,?,?,?)",
+            (item_id, body.title, body.description, json.dumps(body.departments),
+             "backlog", body.priority, None, timestamp, timestamp),
+        )
+        row = db.one("SELECT * FROM work_items WHERE id=?", (item_id,))
+        row["departments"] = json.loads(row["departments"])
+        row["result"] = None
+        return row
+
+    @app.patch("/api/work-items/{item_id}", dependencies=[Depends(admin)])
+    def update_work_item(item_id: str, body: WorkItemUpdate):
+        row = db.one("SELECT * FROM work_items WHERE id=?", (item_id,))
+        if not row:
+            raise HTTPException(404, "Work item not found")
+        db.execute("UPDATE work_items SET status=?,updated_at=? WHERE id=?",
+                   (body.status, now(), item_id))
+        updated = db.one("SELECT * FROM work_items WHERE id=?", (item_id,))
+        updated["departments"] = json.loads(updated["departments"])
+        updated["result"] = json.loads(updated["result"]) if updated["result"] else None
+        return updated
+
+    @app.post("/api/work-items/{item_id}/run", dependencies=[Depends(admin)])
+    async def run_work_item(item_id: str):
+        import asyncio
+
+        from app.department_agents import run_department_agent
+        row = db.one("SELECT * FROM work_items WHERE id=?", (item_id,))
+        if not row:
+            raise HTTPException(404, "Work item not found")
+        department_ids = json.loads(row["departments"])
+        results = await asyncio.gather(
+            *(run_department_agent(dept, row["description"], {"work_item": row["title"]})
+              for dept in department_ids),
+            return_exceptions=True,
+        )
+        completed, failed = [], []
+        for department_id, result in zip(department_ids, results):
+            if isinstance(result, Exception):
+                failed.append({"department": department_id, "error": str(result)})
+            else:
+                completed.append(result)
+        output = {
+            "status": "completed" if not failed else ("partial" if completed else "failed"),
+            "department_results": completed,
+            "failures": failed,
+            "external_actions_executed": False,
+            "human_review_required": True,
+        }
+        new_status = "done" if not failed else "blocked"
+        db.execute("UPDATE work_items SET result=?,status=?,updated_at=? WHERE id=?",
+                   (json.dumps(output), new_status, now(), item_id))
+        output["work_item_id"] = item_id
+        return output
 
     return app
 
