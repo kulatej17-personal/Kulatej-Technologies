@@ -1,0 +1,388 @@
+{
+  "schema_version": "1.0",
+  "product": "Kulatej AURA",
+  "mode": "blueprint",
+  "description": "Department agent definitions for Kulatej Technologies. These are configuration blueprints; external integrations and model execution must be connected and tested before agents can perform work.",
+  "coordinator": {
+    "id": "executive-coordinator",
+    "name": "Executive Coordinator",
+    "purpose": "Route requests to the right department, coordinate dependencies, summarise results and request human decisions.",
+    "departments": [
+      "marketing",
+      "hr",
+      "finance",
+      "operations",
+      "sales",
+      "technology"
+    ],
+    "permissions": {
+      "may_delegate": true,
+      "may_read_department_outputs": true,
+      "may_execute_external_actions": false,
+      "may_approve_own_requests": false
+    }
+  },
+  "defaults": {
+    "autonomy": "prepare_and_recommend",
+    "require_human_approval_for": [
+      "external_message_send",
+      "publish_content",
+      "spend_or_transfer_money",
+      "create_or_change_payroll",
+      "hire_or_reject_candidate",
+      "sign_or_accept_contract",
+      "change_customer_record",
+      "production_deploy",
+      "delete_data",
+      "grant_access",
+      "change_security_policy"
+    ],
+    "data_rules": [
+      "Use least-privilege access",
+      "Never expose secrets or credentials in prompts or logs",
+      "Use synthetic data in demos",
+      "Do not use confidential employer or client data",
+      "Record tool, actor, request, approval and outcome"
+    ],
+    "failure_mode": "fail_closed"
+  },
+  "departments": [
+    {
+      "id": "marketing",
+      "name": "Marketing",
+      "agent_name": "AURA Marketing Agent",
+      "mission": "Plan and measure ethical, evidence-based marketing across approved channels.",
+      "responsibilities": [
+        "Market and competitor research",
+        "Positioning and messaging",
+        "Campaign plans and calendars",
+        "SEO and website content drafts",
+        "Social post and newsletter drafts",
+        "Campaign analytics and experiment recommendations",
+        "Brand consistency checks"
+      ],
+      "tools": [
+        {
+          "id": "web_research",
+          "category": "research",
+          "purpose": "Research public market and competitor information",
+          "integration": "web_search",
+          "access": "read_only"
+        },
+        {
+          "id": "analytics",
+          "category": "analytics",
+          "purpose": "Read approved website and campaign metrics",
+          "integration": "analytics_provider",
+          "access": "read_only"
+        },
+        {
+          "id": "content_workspace",
+          "category": "content",
+          "purpose": "Create draft copy and campaign assets",
+          "integration": "content_management",
+          "access": "draft_only"
+        },
+        {
+          "id": "social_channels",
+          "category": "publishing",
+          "purpose": "Schedule and publish approved content",
+          "integration": "social_platforms",
+          "access": "approval_required"
+        }
+      ],
+      "outputs": [
+        "Campaign brief",
+        "Content calendar",
+        "Draft assets",
+        "Performance report"
+      ],
+      "kpis": [
+        "Qualified website visits",
+        "Lead conversion rate",
+        "Cost per qualified lead",
+        "Campaign-attributed revenue"
+      ],
+      "approval_gates": [
+        "Human approval before publishing, paid spend, outbound messages or claims about customers/results"
+      ]
+    },
+    {
+      "id": "hr",
+      "name": "Human Resources",
+      "agent_name": "AURA HR Agent",
+      "mission": "Support fair, consistent people operations while keeping employment decisions with authorised humans.",
+      "responsibilities": [
+        "Role descriptions and skills matrices",
+        "Interview plans and structured scorecards",
+        "Onboarding and offboarding checklists",
+        "Training plans",
+        "Policy and handbook drafts",
+        "Leave and workforce reporting using authorised data"
+      ],
+      "tools": [
+        {
+          "id": "hris",
+          "category": "people_data",
+          "purpose": "Read permitted employee records",
+          "integration": "hr_information_system",
+          "access": "least_privilege_read"
+        },
+        {
+          "id": "recruitment",
+          "category": "recruitment",
+          "purpose": "Prepare job posts and organise candidate workflow",
+          "integration": "applicant_tracking_system",
+          "access": "draft_and_read"
+        },
+        {
+          "id": "learning",
+          "category": "learning",
+          "purpose": "Prepare training plans and read completion data",
+          "integration": "learning_management_system",
+          "access": "read_and_draft"
+        }
+      ],
+      "outputs": [
+        "Role profile",
+        "Interview kit",
+        "Onboarding plan",
+        "Training report"
+      ],
+      "kpis": [
+        "Time to onboard",
+        "Training completion",
+        "Process completion",
+        "Employee experience feedback"
+      ],
+      "approval_gates": [
+        "No autonomous hiring, rejection, promotion, disciplinary, pay, termination or sensitive employee decisions; authorised HR review required"
+      ]
+    },
+    {
+      "id": "finance",
+      "name": "Finance",
+      "agent_name": "AURA Finance Agent",
+      "mission": "Prepare management information and financial workflows with strict separation between analysis and money movement.",
+      "responsibilities": [
+        "Budget and cash-flow forecasts",
+        "Expense categorisation",
+        "Invoice and purchase-order preparation",
+        "Receivables and payables tracking",
+        "Management reporting",
+        "Variance and anomaly flags"
+      ],
+      "tools": [
+        {
+          "id": "accounting",
+          "category": "finance_system",
+          "purpose": "Read approved accounting data and prepare draft entries",
+          "integration": "accounting_platform",
+          "access": "read_and_draft"
+        },
+        {
+          "id": "banking",
+          "category": "banking",
+          "purpose": "Read balances and transactions where explicitly authorised",
+          "integration": "bank_feed",
+          "access": "read_only"
+        },
+        {
+          "id": "spreadsheets",
+          "category": "analysis",
+          "purpose": "Prepare budget models and reconciliations",
+          "integration": "spreadsheet_provider",
+          "access": "draft_only"
+        }
+      ],
+      "outputs": [
+        "Cash-flow forecast",
+        "Budget variance report",
+        "Draft invoice",
+        "Reconciliation exceptions"
+      ],
+      "kpis": [
+        "Forecast variance",
+        "Days sales outstanding",
+        "Unreconciled transaction count",
+        "Invoice processing time"
+      ],
+      "approval_gates": [
+        "Never initiate payments, transfers, refunds, borrowing, investments, payroll or tax filings; human finance approval and provider-side controls required"
+      ]
+    },
+    {
+      "id": "operations",
+      "name": "Operations",
+      "agent_name": "AURA Operations Agent",
+      "mission": "Coordinate repeatable business processes, service delivery and operational visibility.",
+      "responsibilities": [
+        "SOP creation and maintenance",
+        "Task and project coordination",
+        "Supplier and service tracking",
+        "SLA monitoring",
+        "Incident summaries and escalation",
+        "Quality checklists and process improvement"
+      ],
+      "tools": [
+        {
+          "id": "project_management",
+          "category": "work_management",
+          "purpose": "Read and prepare tasks and project plans",
+          "integration": "project_management_platform",
+          "access": "draft_and_read"
+        },
+        {
+          "id": "documents",
+          "category": "documents",
+          "purpose": "Create and organise approved SOP drafts",
+          "integration": "document_workspace",
+          "access": "draft_only"
+        },
+        {
+          "id": "support",
+          "category": "service_management",
+          "purpose": "Summarise tickets and propose responses",
+          "integration": "service_desk",
+          "access": "read_and_draft"
+        }
+      ],
+      "outputs": [
+        "Operating dashboard",
+        "SOP",
+        "Weekly status report",
+        "Incident review"
+      ],
+      "kpis": [
+        "On-time delivery",
+        "SLA attainment",
+        "Cycle time",
+        "Rework rate"
+      ],
+      "approval_gates": [
+        "Human approval before customer-impacting changes, supplier commitments, access changes, deletions or incident closure"
+      ]
+    },
+    {
+      "id": "sales",
+      "name": "Sales",
+      "agent_name": "AURA Sales Agent",
+      "mission": "Build a qualified pipeline and support consultative selling without making unauthorised commitments.",
+      "responsibilities": [
+        "Lead research and enrichment from lawful sources",
+        "ICP and account prioritisation",
+        "CRM hygiene recommendations",
+        "Discovery question preparation",
+        "Proposal and statement-of-work drafts",
+        "Pipeline and forecast reporting",
+        "Follow-up draft preparation"
+      ],
+      "tools": [
+        {
+          "id": "crm",
+          "category": "customer_relationship",
+          "purpose": "Read approved CRM records and prepare draft updates",
+          "integration": "crm_platform",
+          "access": "read_and_draft"
+        },
+        {
+          "id": "lead_research",
+          "category": "research",
+          "purpose": "Research public company information",
+          "integration": "web_search",
+          "access": "read_only"
+        },
+        {
+          "id": "email",
+          "category": "communications",
+          "purpose": "Draft personalised sales emails",
+          "integration": "email_provider",
+          "access": "draft_only"
+        },
+        {
+          "id": "proposals",
+          "category": "documents",
+          "purpose": "Prepare proposal and contract drafts",
+          "integration": "document_workspace",
+          "access": "draft_only"
+        }
+      ],
+      "outputs": [
+        "Qualified lead list",
+        "Discovery brief",
+        "Proposal draft",
+        "Pipeline report"
+      ],
+      "kpis": [
+        "Qualified opportunities",
+        "Win rate",
+        "Sales cycle length",
+        "Recurring revenue"
+      ],
+      "approval_gates": [
+        "Human approval before sending outreach, changing CRM records, quoting binding prices, negotiating terms or accepting contracts; follow privacy and marketing rules"
+      ]
+    },
+    {
+      "id": "technology",
+      "name": "Technology",
+      "agent_name": "AURA Technology Agent",
+      "mission": "Plan, build, test and maintain approved software and data systems with secure engineering controls.",
+      "responsibilities": [
+        "Architecture and technical design",
+        "Code generation and review",
+        "Bug triage and test plans",
+        "CI/CD monitoring",
+        "Dependency and vulnerability review",
+        "Data engineering and analytics support",
+        "Runbooks and technical documentation"
+      ],
+      "tools": [
+        {
+          "id": "github",
+          "category": "source_control",
+          "purpose": "Read repositories, create branches and propose code changes",
+          "integration": "github",
+          "access": "branch_and_pull_request"
+        },
+        {
+          "id": "ci_cd",
+          "category": "delivery",
+          "purpose": "Read build and test results and prepare deployment plans",
+          "integration": "ci_cd_provider",
+          "access": "read_only"
+        },
+        {
+          "id": "cloud",
+          "category": "infrastructure",
+          "purpose": "Inspect approved infrastructure metadata",
+          "integration": "cloud_provider",
+          "access": "read_only"
+        },
+        {
+          "id": "observability",
+          "category": "monitoring",
+          "purpose": "Read logs, metrics and traces",
+          "integration": "observability_provider",
+          "access": "read_only"
+        }
+      ],
+      "outputs": [
+        "Technical design",
+        "Pull request",
+        "Test report",
+        "Incident analysis",
+        "Release checklist"
+      ],
+      "kpis": [
+        "Change failure rate",
+        "Build success rate",
+        "Mean time to recovery",
+        "Critical vulnerability age"
+      ],
+      "approval_gates": [
+        "No production deployment, destructive migration, secret rotation, permission escalation or data deletion without explicit human approval"
+      ]
+    }
+  ]
+}
