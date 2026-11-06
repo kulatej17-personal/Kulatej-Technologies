@@ -1,18 +1,30 @@
 import json
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from fastapi import FastAPI, Header, HTTPException, Depends
+from typing import Annotated
+
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+
 from app.db import Database
 from app.policy import evaluate_action
-from app.schemas import AgentCreate, AgentCreated, AgentPublic, ActionCreate, ActionResult, ActionPublic
-from app.security import hash_token, new_agent_token, extract_bearer, require_admin
+from app.schemas import (
+    ActionCreate,
+    ActionPublic,
+    ActionResult,
+    AgentCreate,
+    AgentCreated,
+    AgentPublic,
+)
+from app.security import extract_bearer, hash_token, new_agent_token, require_admin
+
 
 def now():
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
+
 
 def create_app(db_path=None, admin_token=None):
     db = Database(db_path or os.getenv("AURA_DB_PATH", "data/aura.db"))
@@ -64,7 +76,7 @@ def create_app(db_path=None, admin_token=None):
         return [db.decode_agent(r) for r in db.all("SELECT * FROM agents ORDER BY created_at DESC")]
 
     @app.post("/api/actions", response_model=ActionPublic, status_code=201)
-    def request_action(body: ActionCreate, a=Depends(agent)):
+    def request_action(body: ActionCreate, a: Annotated[dict, Depends(agent)]):
         status, reason = evaluate_action(body.action, json.loads(a["allowed_actions"]),
                                          json.loads(a["approval_actions"]))
         action_id = str(uuid.uuid4())
@@ -100,7 +112,7 @@ def create_app(db_path=None, admin_token=None):
         return transition(action_id, "pending_approval", "blocked", "Rejected by an administrator.")
 
     @app.post("/api/actions/{action_id}/result", response_model=ActionPublic)
-    def result(action_id: str, body: ActionResult, a=Depends(agent)):
+    def result(action_id: str, body: ActionResult, a: Annotated[dict, Depends(agent)]):
         row = db.one("SELECT * FROM actions WHERE id=?", (action_id,))
         if not row:
             raise HTTPException(404, "Action not found")
@@ -120,5 +132,6 @@ def create_app(db_path=None, admin_token=None):
         return public_action(db.one("SELECT * FROM actions WHERE id=?", (action_id,)))
 
     return app
+
 
 app = create_app()
