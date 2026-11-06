@@ -6,6 +6,8 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS agents(id TEXT PRIMARY KEY,name TEXT NOT NULL,description TEXT NOT NULL,token_hash TEXT NOT NULL UNIQUE,allowed_actions TEXT NOT NULL,approval_actions TEXT NOT NULL,created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS actions(id TEXT PRIMARY KEY,agent_id TEXT NOT NULL,action TEXT NOT NULL,resource TEXT NOT NULL,status TEXT NOT NULL,reason TEXT NOT NULL,payload TEXT NOT NULL,outcome TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,FOREIGN KEY(agent_id) REFERENCES agents(id));
 CREATE INDEX IF NOT EXISTS idx_actions_created ON actions(created_at DESC);
+CREATE TABLE IF NOT EXISTS work_items(id TEXT PRIMARY KEY,title TEXT NOT NULL,description TEXT NOT NULL,departments TEXT NOT NULL,status TEXT NOT NULL,priority TEXT NOT NULL,result TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_work_items_updated ON work_items(updated_at DESC);
 """
 
 class Database:
